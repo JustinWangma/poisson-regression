@@ -1,0 +1,21 @@
+name: poisson-regression
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - numpy=2.2.*
+  - pandas
+  - scikit-learn
+  - joblib
+  - matplotlib
+  - jupyter
+  - pytest
+  - econml
+  - scikit-survival
+  - black
+  - scipy
+  - pip
+  - pip:
+    # add any pip-only packages here
+    # - some-pip-package==1.2.3
