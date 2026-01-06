@@ -1,3 +1,6 @@
+# Reproduction of Atomic Bomb Survivor Mortality Analysis (LSS Report 14)
+
+##  script formulas
 Yes, the formulas in your script are now **highly consistent** with the mathematical framework described in LSS Report 14, with one justifiable simplification regarding the background rate.
 
 Here is the comparison between your code and the paper's methodology:
@@ -56,3 +59,89 @@ Your script successfully translates the complex methodology of LSS Report 14 int
 * ✅ **Optimization:** Matches the Poisson regression method.
 
 You are ready to run this analysis. The results should be very close to the standard values (ERR  0.40–0.50 per Gy).
+
+ 
+ 
+
+Here is a formal presentation of your results, structured for an academic setting (e.g., a slide deck or a report section). It focuses on **validation**, comparing your specific Python output directly against the published findings in **LSS Report 14**.
+
+---
+
+
+## Results
+### 1. Methodology
+
+* **Data Source:** Life Span Study (LSS) Report 14 dataset (1950–2003).
+* **Statistical Framework:** Poisson Regression for grouped survival data (Person-Year Tables).
+* **Model Specification:**
+* **Radiation Effect:** Linear Dose-Response Model ().
+* **Background Rate:** Modeled using a Power Function for Attained Age () to align with LSS methodology.
+* **Optimization:** Negative Log-Likelihood minimization via `scipy.optimize`.
+
+
+
+---
+
+### 2. Computational Results (Python Script)
+
+The following parameters were estimated using the replication script:
+
+| Parameter | Estimate | Std. Error | P-Value | Interpretation |
+| --- | --- | --- | --- | --- |
+| **Intercept** | **-5.34** | 0.030 | < 0.001 | Baseline log-rate at age 70 (Female, Nagasaki). |
+| **Attained Age** | **4.39** | 0.056 | < 0.001 | Background cancer risk scales with the **4.4 power** of age. |
+| **Age at Exposure** | **0.14** | 0.067 | 0.033 | Older age at exposure slightly increases baseline risk. |
+| **Sex (Male)** | **0.64** | 0.019 | < 0.001 | Males have ~1.9x higher background mortality than females. |
+| **City (Hiroshima)** | **-0.03** | 0.021 | 0.223 | No significant difference in background rate between cities. |
+| **Radiation Risk** | **0.48** | 0.044 | < 0.001 | **Excess Relative Risk (ERR) per Gray.** |
+
+---
+
+### 3. Validation Against Published Literature
+
+The replication results show a high degree of alignment with **LSS Report 14**.
+
+#### A. Primary Endpoint: Radiation Risk (ERR/Gy)
+
+* **Script Result:** `0.48` (SE 0.044)
+* 
+**Published Result:** `0.47` (95% CI: 0.38, 0.56) for all solid cancer.
+
+
+* **Conclusion:** The Python model successfully reproduced the primary radiation risk estimate. The point estimate (0.48) lies nearly in the exact center of the published confidence interval.
+
+#### B. Background Age Dependence
+
+* **Script Result:** `4.39` (Coefficient for ).
+* 
+**Published Result:** The report indicates that the **Excess Absolute Risk (EAR)** scales with the **3.4 power** of age , while the **Excess Relative Risk (ERR)** declines with the **-0.86 power** of age.
+
+
+* **Validation:** Since , the background power can be derived as:
+
+
+
+* **Conclusion:** The script’s estimated background power of **4.39** is consistent with the derived biological trend in the paper (~4.26).
+
+#### C. Sex Effects
+
+* **Script Result:** Significant positive coefficient for males (`0.64`), implying higher background risk.
+* 
+**Published Result:** The report confirms that "background mortality rates of cancer were substantially higher in men than in women".
+
+
+* **Conclusion:** The model correctly identifies male sex as a strong risk factor for background mortality.
+
+---
+
+### 4. Discussion & Interpretation
+
+* **Radiation Dose-Response:** The analysis confirms a highly significant, positive association between radiation dose and solid cancer mortality ().
+* **Consistency:** The switch to a **Power Model** for age () was critical for replicating the paper's findings. This confirms that cancer mortality in this cohort follows a power law relative to age, rather than a simple exponential curve.
+* **Independence of City:** The analysis found no statistically significant difference in background mortality between Hiroshima and Nagasaki (), validating the report's approach of pooling both cities into a single dataset for robust estimation.
+
+### 5. Final Conclusion
+
+The Python script utilizing `scipy.optimize` and a Poisson likelihood framework has successfully reproduced the key findings of **LSS Report 14**. The estimated Excess Relative Risk (ERR) of **0.48/Gy** is effectively identical to the published value of **0.47/Gy**.
+
+This establishes a validated baseline model for **Step 2** of the project: applying Causal Machine Learning estimators to the same dataset.
