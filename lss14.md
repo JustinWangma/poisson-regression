@@ -145,3 +145,83 @@ The replication results show a high degree of alignment with **LSS Report 14**.
 The Python script utilizing `scipy.optimize` and a Poisson likelihood framework has successfully reproduced the key findings of **LSS Report 14**. The estimated Excess Relative Risk (ERR) of **0.48/Gy** is effectively identical to the published value of **0.47/Gy**.
 
 This establishes a validated baseline model for **Step 2** of the project: applying Causal Machine Learning estimators to the same dataset.
+
+## plot
+
+This plot is the visual proof that the linear model (the red line) actually matches the real-world data (the black dots). It confirms that assuming a "straight line" for radiation risk was a correct scientific choice.
+
+Here is the breakdown of exactly what you are seeing and how the math works behind the scenes.
+
+### 1. Reading the Plot
+
+* **X-Axis (Radiation Dose):** This is the "Treatment."
+* Left side (0 Gy): People with no radiation.
+* Right side (2.5 Gy): People with very high radiation exposure.
+
+
+* **Y-Axis (Relative Risk):** This is the "Danger Level."
+* **1.0:** Normal risk (same as an unexposed person).
+* **2.0:** Double the risk.
+
+
+* **The Black Dots (Observed Risk):**
+* These are the "Real World" data points.
+* We calculated these **without** assuming a straight line. We essentially asked: *"Hey, for the group of people who got exactly 1.0 Gy, how much cancer did they actually get compared to the 0 Gy group?"*
+
+
+* **The Error Bars (Vertical Lines):**
+* These show our uncertainty.
+* **Small bars (at low dose):** We have lots of data (thousands of survivors), so we are very sure about the risk.
+* **Huge bars (at high dose):** Very few people survived high radiation (e.g., >2 Gy). Because the sample size is small, the statistical margin of error is massive.
+
+
+* **The Red Line (Your Model):**
+* This is the math formula you calculated in Step 1: .
+* **The Insight:** Notice how the red line passes almost perfectly through the black dots? That proves your model is excellent.
+
+
+
+---
+
+### 2. How the "ERR per Bin" is Calculated (The Math)
+
+You asked how we calculate the risk for those specific dots (the bins). We use a method called **Categorical Regression**.
+
+Instead of fitting one single slope (), we treat every dose group as if it were a totally different city or sex. We calculate a separate "multiplier" for each group.
+
+#### Step A: Create the Bins
+
+We slice the survivors into groups based on their dose.
+
+* **Bin 0 (Reference):** 0 - 0.005 Gy (The Control Group).
+* **Bin 1:** 0.005 - 0.1 Gy
+* ...
+* **Bin 5:** 1.0 - 2.0 Gy
+
+#### Step B: The "Multiplier" Formula
+
+We run a Poisson regression, but the formula looks different. instead of `Dose * Beta`, we use `Is_In_Bin_X`.
+
+* **For the Control Group (Bin 0):** All the "Bin" switches are OFF (0).
+* 
+
+
+* **For the 1.0 Gy Group (Bin 5):** The "Bin 5" switch is ON (1).
+* 
+
+
+
+#### Step C: Calculating Relative Risk (RR)
+
+The Relative Risk is simply the rate of the exposed group divided by the rate of the control group.
+
+**Example from your plot:**
+
+* Look at the dot near **1.0 Gy**.
+* The Y-value is roughly **1.5**.
+* This means .
+* **Interpretation:** People in the 1.0 Gy bin died of cancer **1.5 times more often** (50% more) than the people in the 0 Gy bin, after adjusting for age and sex.
+
+### plot Summary 
+
+*"The black dots represent a categorical analysis where we estimated the risk for each dose group independently, making no assumptions about the shape of the curve. The red line is our linear model (). The fact that the dots align with the line confirms that the Linear No-Threshold (LNT) model provides a robust fit to the data."*

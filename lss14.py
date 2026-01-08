@@ -3,6 +3,10 @@ import pandas as pd
 from scipy.optimize import minimize
 from scipy.stats import chi2, norm
 import os
+import matplotlib.pyplot as plt
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+
 
 # ==========================================
 # 1. HELPER FUNCTIONS (Poisson Model)
@@ -94,16 +98,7 @@ def calculate_wald_test(model_func, result, data):
 # 2. MAIN ANALYSIS
 # ==========================================
 
-def run_analysis():
-    # 1. Load Real Data
-    data_path = r"data\lss14.csv"
-    # Ensure lss14.csv is in the same folder or update path
-    if os.path.exists(data_path):
-        df = pd.read_csv(data_path)
-        print(f"Loaded lss14.csv with {len(df)} rows.")
-    else:
-        print("Error: lss14.csv not found.")
-        return
+def run_analysis(df):
 
     # 2. Data Cleaning
     # Remove rows with 0 person-years (cannot model rate)
@@ -138,6 +133,127 @@ def run_analysis():
         print(f"\nExcess Relative Risk (ERR) per Gy: {res.x[5]:.4f}")
     else:
         print("Optimization Failed:", res.message)
+    return res
+
+def plot_err_curve(df, res):
+    # # 1. Load Data
+    # data_path = r"data\lss14.csv"
+    # try:
+    #     df = pd.read_csv(data_path)
+    # except FileNotFoundError:
+    #     print("Error: lss14.csv not found.")
+    #     return
+
+    # Filter standard data
+    df = df[df['pyr'] > 0].copy()
+    
+    # 2. Prepare Variables
+    # Convert mGy to Gy
+    df['dose_gy'] = df['colon10'] / 1000.0
+    # Log variables for offset and age (Power model match)
+    df['log_pyr'] = np.log(df['pyr'])
+    df['log_age_70'] = np.log(df['age'] / 70.0)
+
+    # 3. Create Dose Categories (Binned Analysis)
+    # We create bins to calculate independent risk points
+    # Bins: 0, 0.1, 0.2, 0.5, 1.0, 2.0, Max
+    bins = [-0.001, 0.005, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0]
+    labels = range(len(bins)-1)
+    df['dose_cat'] = pd.cut(df['dose_gy'], bins=bins, labels=labels)
+    
+    # Calculate the mean dose for each category (for plotting position)
+    dose_means = df.groupby('dose_cat')['dose_gy'].mean()
+
+    print("Fitting Categorical Poisson Model (for plotting points)...")
+    
+    # 4. Fit Categorical Poisson Model (Statsmodels)
+    # We use 'C(dose_cat)' to treat each bin as a separate yes/no variable
+    # Baseline: The first bin (0 dose) is automatically the reference (RR=1)
+    formula = "solid ~ C(dose_cat) + C(sex) + C(city) + log_age_70"
+    
+    model = smf.glm(formula=formula, data=df, 
+                    offset=df['log_pyr'], 
+                    family=sm.families.Poisson()).fit()
+
+    # 5. Extract Results for Plotting
+    # Get coefficients and confidence intervals
+    params = model.params
+    conf_int = model.conf_int()
+    
+    # Lists to store plotting data
+    x_vals = []
+    y_vals = [] # Relative Risks
+    y_err_lower = []
+    y_err_upper = []
+
+    # Loop through categories to build RR points
+    # Note: The first category (0 dose) is the baseline, so RR=1, Dose=Mean of Bin 0
+    x_vals.append(dose_means[0])
+    y_vals.append(1.0)
+    y_err_lower.append(0.0) 
+    y_err_upper.append(0.0)
+
+    for i in range(1, len(bins)-1):
+        # Statsmodels naming convention: C(dose_cat)[T.i]
+        col_name = f"C(dose_cat)[T.{i}]"
+        
+        if col_name in params:
+            coef = params[col_name]
+            ci_low = conf_int.loc[col_name, 0]
+            ci_high = conf_int.loc[col_name, 1]
+            
+            # Convert Log-Rate to Rate Ratio (RR = exp(coef))
+            rr = np.exp(coef)
+            rr_low = np.exp(ci_low)
+            rr_high = np.exp(ci_high)
+            
+            x_vals.append(dose_means[i])
+            y_vals.append(rr)
+            # Matplotlib error bars are relative lengths, not absolute positions
+            y_err_lower.append(rr - rr_low)
+            y_err_upper.append(rr_high - rr)
+
+    # 6. Plotting
+    plt.figure(figsize=(10, 6))
+
+    # A. Plot the Data Points (Categorical Estimates)
+    plt.errorbar(x_vals, y_vals, yerr=[y_err_lower, y_err_upper], 
+                 fmt='o', color='black', capsize=5, label='Observed Risk (Categorical Fit)')
+
+    # B. Plot the Linear Model (Step 1 Result)
+    # Formula: ERR = 0.48 * Dose  -->  RR = 1 + 0.48 * Dose
+    linear_beta =  round(res.x[5], 4)
+    x_line = np.linspace(0, 3.0, 100)
+    y_line = 1 + linear_beta * x_line
+    
+    plt.plot(x_line, y_line, color='red', linewidth=2, 
+             label=f'Linear Model (ERR = {linear_beta}/Gy)')
+
+    # Formatting
+    plt.axhline(y=1, color='gray', linestyle='--', linewidth=1)
+    plt.xlabel('Radiation Dose (Gy)', fontsize=12)
+    plt.ylabel('Relative Risk (RR)', fontsize=12)
+    plt.title('Dose-Response Curve: Atomic Bomb Survivors\n(Solid Cancer Mortality)', fontsize=14)
+    plt.legend(fontsize=12)
+    plt.grid(True, alpha=0.3)
+    plt.xlim(0, 2.5) # Focus on the main data range
+    
+    # Save
+    plt.savefig('lss_dose_response_curve.png', dpi=300)
+    print("Plot saved as 'lss_dose_response_curve.png'")
+    plt.show()
+
+def read_csv():
+    # 1. Load Data
+    data_path = r"data\lss14.csv"
+    try:
+        df = pd.read_csv(data_path)
+    except FileNotFoundError:
+        print("Error: lss14.csv not found.")
+        return
+    return df
 
 if __name__ == "__main__":
-    run_analysis()
+    df=read_csv()
+    res=run_analysis(df)
+    plot_err_curve(df, res)
