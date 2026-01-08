@@ -13,23 +13,9 @@ warnings.filterwarnings("ignore")
 
 def run_causal_ml_analysis():
     # 1. Load Data
-    data_path = r"data\lss14.csv"
-    if not os.path.exists(data_path):
-        print("Error: lss14.csv not found.")
+    df = load_and_prep_data()
+    if df is None:
         return
-
-    df = pd.read_csv(data_path)
-    
-    # 2. Data Preparation
-    # Filter out rows with 0 person-years to avoid division errors
-    df = df[df['pyr'] > 0].copy()
-
-    # Create the Outcome: Mortality Rate (Deaths per Person-Year)
-    # We multiply by 10,000 to make the numbers readable (Deaths per 10k PY)
-    df['mortality_rate_10k'] = (df['solid'] / df['pyr']) * 10000
-
-    # Create Treatment: Dose in Gy (convert from mGy)
-    df['dose_gy'] = df['colon10'] / 1000.0
 
     # Define Confounders (The background factors)
     confounders = ['age', 'agex', 'sex', 'city'] 
@@ -99,6 +85,99 @@ def run_causal_ml_analysis():
     print(refute)
 
 
+# Suppress warnings for cleaner output
+warnings.filterwarnings("ignore")
+
+def load_and_prep_data(filepath=r"data\lss14.csv"):
+    """
+    Loads the CSV, cleans it, and creates necessary columns.
+    Returns a prepared DataFrame.
+    """
+    if not os.path.exists(filepath):
+        print(f"Error: {filepath} not found.")
+        return None
+
+    df = pd.read_csv(filepath)
+    
+    # 1. Filter out rows with 0 person-years
+    df = df[df['pyr'] > 0].copy()
+
+    # 2. Create Outcome: Mortality Rate (per 10,000 PY)
+    df['mortality_rate_10k'] = (df['solid'] / df['pyr']) * 10000
+
+    # 3. Create Treatment: Dose in Gy (convert from mGy)
+    df['dose_gy'] = df['colon10'] / 1000.0
+    
+    return df
+
+def run_subgroup_analysis(min_age, max_age):
+    """
+    Runs the Causal ML analysis on a specific age range of survivors.
+    """
+    print("\n" + "="*60)
+    print(f" SUBGROUP ANALYSIS: AGE {min_age} - {max_age}")
+    print("="*60)
+
+    # 1. Load Data
+    df = load_and_prep_data()
+    if df is None:
+        return
+
+    # 2. Filter for the specific Age Window
+    original_count = len(df)
+    subgroup_df = df[(df['age'] >= min_age) & (df['age'] <= max_age)].copy()
+    
+    print(f"Original Dataset: {original_count} rows")
+    print(f"Filtered Dataset: {len(subgroup_df)} rows (Survivors aged {min_age}-{max_age})")
+
+    # Check if we have enough data to run
+    if len(subgroup_df) < 100:
+        print("Error: Not enough data points in this age range to run ML model.")
+        return
+
+    # 3. Define Confounders
+    # We still control for specific age/sex/city within this window
+    confounders = ['age', 'agex', 'sex', 'city'] 
+
+    # 4. Setup Causal Model (DoWhy)
+    model = CausalModel(
+        data=subgroup_df,
+        treatment='dose_gy',
+        outcome='mortality_rate_10k',
+        common_causes=confounders
+    )
+    
+    identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
+
+    # 5. Estimate Effect (LinearDML)
+    print("Training Causal ML Model (LinearDML)...")
+    
+    estimate = model.estimate_effect(
+        identified_estimand,
+        method_name="backdoor.econml.dml.LinearDML",
+        target_units="ate",
+        method_params={
+            "init_params": {
+                # Using Random State 42 for reproducible results
+                "model_y": RandomForestRegressor(n_estimators=100, min_samples_leaf=20, random_state=42), 
+                "model_t": RandomForestRegressor(n_estimators=100, min_samples_leaf=20, random_state=42),
+                "linear_first_stages": False,
+                "discrete_treatment": False
+            },
+            "fit_params": {
+                "sample_weight": subgroup_df['pyr'].values
+            }
+        }
+    )
+
+    # 6. Output Results
+    print("-" * 40)
+    print(f"Estimated ATE (Age {min_age}-{max_age}): {estimate.value:.4f}")
+    print("(Excess deaths per 10,000 person-years per Gy)")
+    print("-" * 40)
+
 
 if __name__ == "__main__":
+
     run_causal_ml_analysis()
+    run_subgroup_analysis(60, 80)

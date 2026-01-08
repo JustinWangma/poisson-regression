@@ -1,4 +1,4 @@
-# Reproduction of Atomic Bomb Survivor Mortality Analysis (LSS Report 14)
+# Reproduction of Atomic Bomb Survivor Mortality Analysis (Poisson regression)
 
 ##  script formulas
 Yes, the formulas in your script are now **highly consistent** with the mathematical framework described in LSS Report 14, with one justifiable simplification regarding the background rate.
