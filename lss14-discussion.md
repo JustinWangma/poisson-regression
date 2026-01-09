@@ -1,4 +1,3 @@
-
 # Discussion & Conclusion
 
 ### 1. Introduction: The Challenge of Causal Inference in Epidemiology
@@ -39,7 +38,7 @@ The most significant finding emerged from the subgroup analysis. LSS Report 14 p
 
 To validate our AI against this specific benchmark, we restricted the Causal ML model to survivors aged 60–80.
 
-* **Our Subgroup Result:** **26.01** excess deaths per 10,000 PY.
+* **Our Subgroup Result:** **24.11** excess deaths per 10,000 PY.
 * **Benchmark:** **~26.00** excess deaths per 10,000 PY.
 
 ### 4. Conclusion
