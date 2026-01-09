@@ -47,7 +47,7 @@ def run_causal_ml_analysis():
     # - But it allows the Background Rate (Age/Sex effects) to be non-linear 
     #   and complex, modeled by Random Forests.
     
-    print("DoWhy-CMLTraining Causal ML Model (LinearDML with Random Forests)...")
+    print("DoWhy-CML Training Causal ML Model (LinearDML with Random Forests)...")
     print("Note: This uses person-years as sample weights for accuracy.")
     
     estimate = model.estimate_effect(
@@ -80,7 +80,7 @@ def run_causal_ml_analysis():
     # 5. Robustness Check (Refutation)
     # Placebo Test: Replace the true dose with a random variable.
     # The effect should drop to roughly 0.
-    print("\nDoWhy-CML Running Placebo Refutation (Sanity Check)...")
+    print("\nDoWhy-CML Running Placebo Refutation ...")
     refute = model.refute_estimate(
         identified_estimand, 
         estimate,
@@ -90,6 +90,25 @@ def run_causal_ml_analysis():
         random_state=42  # Fix 3: Lock the Placebo Shuffling
     )
     print(refute)
+
+
+    # --- NEW: Random Common Cause Test ---
+    print("\nDoWhy-CML Running Random Common Cause Refutation...")
+    refute_rcc = model.refute_estimate(
+        identified_estimand, 
+        estimate,
+        method_name="random_common_cause", # Adds a Fake Confounder, Effect should stay the same.
+        num_simulations=5,
+        random_state=42
+    )
+    
+    print(f"DoWhy-CML Original Effect:  {refute_rcc.estimated_effect:.4f}")
+    print(f"DoWhy-CML New Effect (RCC): {refute_rcc.new_effect:.4f}")
+
+    if abs(refute_rcc.new_effect - refute_rcc.estimated_effect) < 1.0:
+        print(">> SUCCESS: Model is robust to random noise.")
+    else:
+        print(">> WARNING: The estimate is unstable.")
 
 
 # Suppress warnings for cleaner output
@@ -187,5 +206,5 @@ def run_subgroup_analysis(min_age, max_age):
 
 if __name__ == "__main__":
 
-    # run_causal_ml_analysis()
-    run_subgroup_analysis(60, 80)
+    run_causal_ml_analysis()
+    # run_subgroup_analysis(60, 80)
