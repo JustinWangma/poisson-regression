@@ -30,7 +30,6 @@ First, we established a baseline using traditional Poisson regression to ensure 
 We then applied the Causal ML (LinearDML) model to the full population (1950–2003) to estimate the absolute number of excess deaths.
 
 * **Result:** Average Treatment Effect (ATE) = **13.4** excess deaths per 10,000 person-years.
-* **Robustness Check:** A **Placebo Refutation** test (shuffling the dose variable) returned an effect of **-0.09** (). The drop from 13.4 to ~0 confirmed that the model was detecting a true signal and not overfitting to noise.
 
 #### Phase 3: The "Gold Standard" Validation (Subgroup Analysis)
 
@@ -41,8 +40,38 @@ To validate our AI against this specific benchmark, we restricted the Causal ML 
 * **Our Subgroup Result:** **24.11** excess deaths per 10,000 PY.
 * **Benchmark:** **~26.00** excess deaths per 10,000 PY.
 
+ 
+
+#### Refutation test 
+
+#####  The Placebo Test (Validity Check)
+
+* **Question:** *"If I shuffling the radiation dose, does the effect disappear?"*
+* **Your Result:** Dropped from **13.81**  **0.02**.
+* **Verdict:** **PASSED.**
+* The model correctly identified that the fake data contained zero signal. It didn't "hallucinate" a relationship.
+
+##### The Random Common Cause Test (Robustness Check)
+
+* **Question:** *"If I confuse the model with Fake Confounder, does New Effect $\approx$ Original Effect?"*
+* **Your Result:** Moved from **13.81**  **13.94**.
+* **Difference:** `0.13` (approx 1%).
+* **Verdict:** **PASSED.**
+* This proves your Random Forests are strong. They successfully ignored the random noise column you added and kept their focus on the real radiation variable.
+
+##### Comparison Summary (For your Presentation)
+
+You can use this exact summary to explain the "Reliability" of your AI:
+
+| Test Name | Scientific Question | Ideal Outcome | Your Result | Status |
+| --- | --- | --- | --- | --- |
+| **Placebo Refuter** | "Is the model hallucinating?" | Effect drops to **0** | **0.02** | ✅ **Perfect** |
+| **Random Common Cause** | "Is the model easily distracted?" | Effect stays **constant** | **13.81  13.94** | ✅ **Robust** |
+
+
+
 ### 4. Conclusion
 
 This project successfully demonstrated that **Double Machine Learning** can precisely replicate gold-standard epidemiological findings without requiring the rigid manual assumptions of traditional models.
 
-The progression of our results—from a population average of **13.4** (reflecting the lower risk of younger survivors) to a specific age-standardized risk of **26.01** (perfectly matching the peak-risk benchmark)—provides compelling evidence for the validity of the LinearDML approach. It confirms that modern Causal AI can correctly disentangle the complex, non-linear confounding effects of aging from the linear causal effect of radiation exposure.
+The progression of our results—from a population average of **13.4** (reflecting the lower risk of younger survivors) to a specific age-standardized risk of **24.11** (very closely matching the peak-risk benchmark)—provides compelling evidence for the validity of the LinearDML approach. It confirms that modern Causal AI can correctly disentangle the complex, non-linear confounding effects of aging from the linear causal effect of radiation exposure.
