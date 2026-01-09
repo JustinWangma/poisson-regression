@@ -8,8 +8,12 @@ from dowhy import CausalModel
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression, LassoCV
 
+
 # Suppress warnings for cleaner output
 warnings.filterwarnings("ignore")
+
+# 1. GLOBAL SEED (Locks down Numpy, which DoWhy uses for shuffling)
+np.random.seed(42)
 
 def run_causal_ml_analysis():
     # 1. Load Data
@@ -43,7 +47,7 @@ def run_causal_ml_analysis():
     # - But it allows the Background Rate (Age/Sex effects) to be non-linear 
     #   and complex, modeled by Random Forests.
     
-    print("Training Causal ML Model (LinearDML with Random Forests)...")
+    print("DoWhy-CMLTraining Causal ML Model (LinearDML with Random Forests)...")
     print("Note: This uses person-years as sample weights for accuracy.")
     
     estimate = model.estimate_effect(
@@ -52,8 +56,10 @@ def run_causal_ml_analysis():
         target_units="ate",
         method_params={
             "init_params": {
-                "model_y": RandomForestRegressor(n_estimators=100, min_samples_leaf=10), # Models Risk ~ Age+Sex
-                "model_t": RandomForestRegressor(n_estimators=100, min_samples_leaf=10), # Models Dose ~ Age+Sex
+                "model_y": RandomForestRegressor(n_estimators=100, min_samples_leaf=20, random_state=42), # Models Risk ~ Age+Sex
+                "model_t": RandomForestRegressor(n_estimators=100, min_samples_leaf=20, random_state=42), # Models Dose ~ Age+Sex
+                # Fix 2: Lock the LinearDML Cross-Validation splitting
+                "random_state": 42,
                 "linear_first_stages": False,
                 "discrete_treatment": False
             },
@@ -66,7 +72,7 @@ def run_causal_ml_analysis():
     )
 
     print("\n" + "="*40)
-    print("CAUSAL ML RESULTS")
+    print("DoWhy-CML RESULTS")
     print("="*40)
     print(f"Estimated ATE: {estimate.value:.4f}")
     print("(Interpretation: Excess deaths per 10,000 person-years for every 1 Gy of dose)")
@@ -74,13 +80,14 @@ def run_causal_ml_analysis():
     # 5. Robustness Check (Refutation)
     # Placebo Test: Replace the true dose with a random variable.
     # The effect should drop to roughly 0.
-    print("\nRunning Placebo Refutation (Sanity Check)...")
+    print("\nDoWhy-CML Running Placebo Refutation (Sanity Check)...")
     refute = model.refute_estimate(
         identified_estimand, 
         estimate,
         method_name="placebo_treatment_refuter",
         placebo_type="permute",
-        num_simulations=5 # Low number for speed; increase for rigorous check
+        num_simulations=5 ,# Low number for speed; increase for rigorous check
+        random_state=42  # Fix 3: Lock the Placebo Shuffling
     )
     print(refute)
 
@@ -115,7 +122,7 @@ def run_subgroup_analysis(min_age, max_age):
     Runs the Causal ML analysis on a specific age range of survivors.
     """
     print("\n" + "="*60)
-    print(f" SUBGROUP ANALYSIS: AGE {min_age} - {max_age}")
+    print(f"DoWhy-CML SUBGROUP ANALYSIS: AGE {min_age} - {max_age}")
     print("="*60)
 
     # 1. Load Data
@@ -161,6 +168,7 @@ def run_subgroup_analysis(min_age, max_age):
                 # Using Random State 42 for reproducible results
                 "model_y": RandomForestRegressor(n_estimators=100, min_samples_leaf=20, random_state=42), 
                 "model_t": RandomForestRegressor(n_estimators=100, min_samples_leaf=20, random_state=42),
+                "random_state": 42,  # Locks the Cross-Validation Splitter
                 "linear_first_stages": False,
                 "discrete_treatment": False
             },
@@ -172,12 +180,12 @@ def run_subgroup_analysis(min_age, max_age):
 
     # 6. Output Results
     print("-" * 40)
-    print(f"Estimated ATE (Age {min_age}-{max_age}): {estimate.value:.4f}")
+    print(f"DoWhy-CML Estimated ATE (Age {min_age}-{max_age}): {estimate.value:.4f}")
     print("(Excess deaths per 10,000 person-years per Gy)")
     print("-" * 40)
 
 
 if __name__ == "__main__":
 
-    run_causal_ml_analysis()
+    # run_causal_ml_analysis()
     run_subgroup_analysis(60, 80)
