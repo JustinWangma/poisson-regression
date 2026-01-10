@@ -1,8 +1,5 @@
-# my-ml-project
 
-Minimal Python ML project scaffold.
-
-Quick start (Windows PowerShell):
+# Quick start (Windows PowerShell):
 
 ## conda
 conda --version
@@ -15,13 +12,12 @@ python --version
 conda --version
 
 ### create an environment file (environment.yml)
-
 conda env create -f environment.yml  
 
 ### to update conda environment
 conda env update -f environment.yml --prune  
 
-### To activate this environment  
+### To activate this environment  ( if project is existing)
 conda activate poisson-regression    
 
 ### run code
