@@ -239,8 +239,8 @@ def plot_err_curve(df, res):
     plt.xlim(0, 2.5) # Focus on the main data range
     
     # Save
-    plt.savefig('lss_dose_response_curve.png', dpi=300)
-    print("Plot saved as 'lss_dose_response_curve.png'")
+    plt.savefig('lss14-Poisson-regression_dose_RR_curve.png', dpi=300)
+    print("Plot saved as 'lss14-Poisson-regression_dose_RR_curve.png'")
     plt.show()
 
 def read_csv():
